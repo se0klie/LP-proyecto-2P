@@ -80,4 +80,34 @@ class Validator
 
         return $errores;
     }
+
+    // 
+
+    /**
+     * Valida los datos para enviar una reseña.
+     */
+    public static function validarCrearResena(array $data): array
+    {
+        $errores = [];
+
+        // Validar ID del evento
+        if (empty($data['evento_id']) || !filter_var($data['evento_id'], FILTER_VALIDATE_INT)) {
+            $errores['evento_id'] = 'El ID del evento es inválido u obligatorio.';
+        }
+
+        // Validar calificación (estrellas de 1 a 5)
+        if (!isset($data['calificacion']) || !filter_var($data['calificacion'], FILTER_VALIDATE_INT)) {
+            $errores['calificacion'] = 'La calificación es obligatoria.';
+        } elseif ((int) $data['calificacion'] < 1 || (int) $data['calificacion'] > 5) {
+            $errores['calificacion'] = 'La calificación debe estar entre 1 y 5 estrellas.';
+        }
+
+        // Validar comentario (opcional, pero con límite)
+        if (!empty($data['comentario']) && mb_strlen($data['comentario']) > 500) {
+            $errores['comentario'] = 'El comentario no puede exceder los 500 caracteres.';
+        }
+
+        return $errores;
+    }
+
 }

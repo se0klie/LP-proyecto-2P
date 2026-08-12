@@ -80,3 +80,44 @@ CREATE INDEX idx_eventos_estado ON eventos(estado);
 -- INSERT INTO usuarios (nombre, email, password_hash, rol)
 -- VALUES ('Organizador Demo', 'organizador@espol.edu.ec',
 --         '$2y$10$examplehashreplaceinreal', 'organizador');
+
+
+
+
+-- ------------------------------------------------------------
+-- Usuario organizador de prueba (password: "Organizador123")
+-- Hash generado con password_hash() - bcrypt
+-- ------------------------------------------------------------
+-- INSERT INTO usuarios (nombre, email, password_hash, rol)
+-- VALUES ('Organizador Demo', 'organizador@espol.edu.ec',
+--         '$2y$10$examplehashreplaceinreal', 'organizador');
+
+
+-- ------------------------------------------------------------
+-- Tabla: resenas (Módulo de Christian Macias)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS resenas (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    evento_id       INT UNSIGNED NOT NULL,
+    estudiante_id   INT UNSIGNED NOT NULL,
+    calificacion    TINYINT UNSIGNED NOT NULL CHECK (calificacion BETWEEN 1 AND 5),
+    comentario      TEXT NULL,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_resenas_evento FOREIGN KEY (evento_id) REFERENCES eventos(id),
+    CONSTRAINT fk_resenas_estudiante FOREIGN KEY (estudiante_id) REFERENCES usuarios(id),
+    UNIQUE KEY uk_evento_estudiante (evento_id, estudiante_id)
+) ENGINE=InnoDB;
+
+
+
+-- ------------------------------------------------------------
+-- Usuarios de prueba (password: "hash123")
+-- ------------------------------------------------------------
+INSERT INTO usuarios (id, nombre, email, password_hash, rol) 
+VALUES (1, 'Organizador Demo', 'organizador@espol.edu.ec', 'hash123', 'organizador')
+ON DUPLICATE KEY UPDATE id=id;
+
+INSERT INTO usuarios (id, nombre, email, password_hash, rol) 
+VALUES (2, 'Estudiante Demo', 'estudiante@espol.edu.ec', 'hash123', 'estudiante')
+ON DUPLICATE KEY UPDATE id=id;
