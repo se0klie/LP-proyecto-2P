@@ -1,6 +1,5 @@
 <?php
 
-// --- Base de datos ---
 define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
 define('DB_PORT', getenv('DB_PORT') ?: '3306');
 define('DB_NAME', getenv('DB_NAME') ?: 'espol_eventos');
@@ -21,7 +20,30 @@ if (APP_ENV === 'development') {
     error_reporting(0);
 }
 
-// Sesiones (usadas por el middleware de autenticación)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+}
+
+try {
+    $pdo = new PDO(
+        "mysql:host=" . DB_HOST .
+        ";port=" . DB_PORT .
+        ";dbname=" . DB_NAME .
+        ";charset=" . DB_CHARSET,
+        DB_USER,
+        DB_PASS
+    );
+
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+
+} catch (PDOException $e) {
+    http_response_code(500);
+
+    echo json_encode([
+        'success' => false,
+        'message' => 'Error de conexión con la base de datos.'
+    ]);
+
+    exit;
 }

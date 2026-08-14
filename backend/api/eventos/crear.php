@@ -3,6 +3,7 @@
 /**
  * Endpoint: POST /api/eventos/crear.php
  * Funcionalidad: Crear un evento
+ * HAILIE JIMENEZ
  */
 
 require_once __DIR__ . '/../../config/config.php';
