@@ -10,21 +10,19 @@ CREATE DATABASE IF NOT EXISTS espol_eventos
 USE espol_eventos;
 
 -- ------------------------------------------------------------
--- Tabla: usuarios
+-- Tabla: usuarios HAILIE JIMENEZ
 -- Nota: la autenticación completa la maneja otro módulo,
 -- pero se define aquí la estructura mínima requerida para
 -- relacionar un evento con su organizador.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS usuarios (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    nombre          VARCHAR(150)        NOT NULL,
-    email           VARCHAR(150)        NOT NULL UNIQUE,
-    password_hash   VARCHAR(255)        NOT NULL,
-    rol             ENUM('estudiante','organizador','admin') NOT NULL DEFAULT 'estudiante',
-    carrera         VARCHAR(150)        NULL,
-    created_at      TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP
+    usuario         VARCHAR(100) NOT NULL UNIQUE,
+    correo          VARCHAR(150) NOT NULL UNIQUE,
+    contrasena      VARCHAR(255) NOT NULL,
+    cargo           ENUM('estudiante', 'administrativo', 'profesor') NOT NULL,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
-
 -- ------------------------------------------------------------
 -- Tabla: categorias
 -- ------------------------------------------------------------
@@ -43,7 +41,7 @@ INSERT INTO categorias (nombre) VALUES
 ON DUPLICATE KEY UPDATE nombre = VALUES(nombre);
 
 -- ------------------------------------------------------------
--- Tabla: eventos
+-- Tabla: eventos HAILIE JIMENEZ
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS eventos (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -73,25 +71,23 @@ CREATE INDEX idx_eventos_organizador ON eventos(organizador_id);
 CREATE INDEX idx_eventos_fecha ON eventos(fecha_evento);
 CREATE INDEX idx_eventos_estado ON eventos(estado);
 
--- ------------------------------------------------------------
--- Usuario organizador de prueba (password: "Organizador123")
--- Hash generado con password_hash() - bcrypt
--- ------------------------------------------------------------
--- INSERT INTO usuarios (nombre, email, password_hash, rol)
--- VALUES ('Organizador Demo', 'organizador@espol.edu.ec',
---         '$2y$10$examplehashreplaceinreal', 'organizador');
 
+CREATE TABLE IF NOT EXISTS participantes_evento (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    evento_id       INT UNSIGNED NOT NULL,
+    usuario_id      INT UNSIGNED NOT NULL,
+    fecha_registro  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
+    CONSTRAINT fk_participantes_evento
+        FOREIGN KEY (evento_id) REFERENCES eventos(id)
+        ON DELETE CASCADE,
 
+    CONSTRAINT fk_participantes_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        ON DELETE CASCADE,
 
--- ------------------------------------------------------------
--- Usuario organizador de prueba (password: "Organizador123")
--- Hash generado con password_hash() - bcrypt
--- ------------------------------------------------------------
--- INSERT INTO usuarios (nombre, email, password_hash, rol)
--- VALUES ('Organizador Demo', 'organizador@espol.edu.ec',
---         '$2y$10$examplehashreplaceinreal', 'organizador');
-
+    UNIQUE KEY uk_evento_usuario (evento_id, usuario_id)
+) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
 -- Tabla: resenas (Módulo de Christian Macias)

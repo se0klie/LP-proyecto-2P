@@ -20,10 +20,8 @@ Este entregable implementa dos funcionalidades:
 ## 2. Instalación
 
 ```bash
-# 1. Crear la base de datos y tablas
 mysql -u root -p < database/schema.sql
 
-# 2. Configurar variables de entorno (o editar config/config.php)
 export DB_HOST=127.0.0.1
 export DB_NAME=espol_eventos
 export DB_USER=root
@@ -77,11 +75,9 @@ Ejemplo: `/api/eventos/panel-organizador.php?estado=activo`
 ## Pruebas rápidas con cURL
 
 ```bash
-# 1. Simular sesión de organizador
-curl -c cookies.txt "http://localhost:8000/backend/api/dev-login.php?usuario_id=1"
+curl -c cookies.txt "http://localhost:8000/api/dev-login.php?usuario_id=1"
 
-# 2. Crear un evento
-curl -b cookies.txt -X POST http://localhost:8000/backend/api/eventos/crear.php \
+curl -b cookies.txt -X POST http://localhost:8000/api/eventos/crear.php \
   -H "Content-Type: application/json" \
   -d '{
         "titulo": "Feria de Emprendimiento ESPOL 2026",
@@ -93,5 +89,4 @@ curl -b cookies.txt -X POST http://localhost:8000/backend/api/eventos/crear.php 
         "aforo_maximo": 300
       }'
 
-# 3. Ver panel del organizador
 curl -b cookies.txt "http://localhost:8000/api/eventos/panel-organizador.php"
