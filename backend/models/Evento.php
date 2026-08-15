@@ -2,10 +2,6 @@
 
 require_once __DIR__ . '/../config/Database.php';
 
-/**
- * Clase Evento
- * Encapsula el acceso a datos de la tabla `eventos`.
- */
 class Evento
 {
     private PDO $db;
@@ -15,9 +11,6 @@ class Evento
         $this->db = Database::getConnection();
     }
 
-    /**
-     * Verifica que una categoría exista.
-     */
     public function categoriaExiste(int $categoriaId): bool
     {
         $stmt = $this->db->prepare('SELECT 1 FROM categorias WHERE id = :id');
@@ -25,13 +18,6 @@ class Evento
         return (bool) $stmt->fetchColumn();
     }
 
-    /**
-     * Crea un nuevo evento en el sistema.
-     *
-     * @param array $data       Datos ya validados del evento.
-     * @param int   $organizadorId  Id del organizador autenticado.
-     * @return int  Id del evento recién creado.
-     */
     public function create(array $data, int $organizadorId): int
     {
         $sql = 'INSERT INTO eventos
@@ -57,9 +43,6 @@ class Evento
         return (int) $this->db->lastInsertId();
     }
 
-    /**
-     * Retorna un evento por id (incluye el nombre de la categoría).
-     */
     public function findById(int $id): ?array
     {
         $sql = 'SELECT e.*, c.nombre AS categoria_nombre
@@ -74,14 +57,6 @@ class Evento
         return $evento ?: null;
     }
 
-    /**
-     * Lista todos los eventos creados por un organizador específico,
-     * incluyendo el estado actual de los cupos (panel de organizador).
-     *
-     * @param int $organizadorId
-     * @param string|null $estado Filtro opcional: activo | cancelado | finalizado
-     * @return array
-     */
     public function getByOrganizador(int $organizadorId, ?string $estado = null): array
     {
         $sql = 'SELECT
@@ -118,10 +93,6 @@ class Evento
         return $stmt->fetchAll();
     }
 
-    /**
-     * Devuelve un pequeño resumen agregado para el panel del organizador
-     * (total de eventos, activos, cupos totales ofertados/ocupados).
-     */
     public function getResumenOrganizador(int $organizadorId): array
     {
         $sql = 'SELECT
@@ -138,5 +109,58 @@ class Evento
         $stmt->execute(['organizador_id' => $organizadorId]);
 
         return $stmt->fetch() ?: [];
+    }
+
+    public function update(
+        int $eventoId,
+        array $data,
+        int $organizadorId
+    ): bool {
+        $sql = "
+            UPDATE eventos
+            SET
+                titulo = :titulo,
+                descripcion = :descripcion,
+                fecha_evento = :fecha_evento,
+                hora_evento = :hora_evento,
+                lugar = :lugar,
+                categoria_id = :categoria_id,
+                aforo_maximo = :aforo_maximo
+            WHERE id = :id
+            AND organizador_id = :organizador_id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            ':titulo' => $data['titulo'],
+            ':descripcion' => $data['descripcion'],
+            ':fecha_evento' => $data['fecha_evento'],
+            ':hora_evento' => $data['hora_evento'] ?? null,
+            ':lugar' => $data['lugar'] ?? null,
+            ':categoria_id' => (int) $data['categoria_id'],
+            ':aforo_maximo' => (int) $data['aforo_maximo'],
+            ':id' => $eventoId,
+            ':organizador_id' => $organizadorId
+        ]);
+    }
+    public function delete(
+        int $eventoId,
+        int $organizadorId
+    ): bool {
+        $sql = "
+            DELETE FROM eventos
+            WHERE id = :id
+            AND organizador_id = :organizador_id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            ':id' => $eventoId,
+            ':organizador_id' => $organizadorId
+        ]);
+
+        return $stmt->rowCount() > 0;
     }
 }

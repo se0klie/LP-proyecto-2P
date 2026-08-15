@@ -1,23 +1,11 @@
 <?php
 
-/**
- * Clase Validator
- * Reglas de validación reutilizables para los datos de entrada
- * del módulo de eventos.
- */
 class Validator
 {
-    /**
-     * Valida los datos para la creación de un evento.
-     *
-     * @param array $data Datos crudos recibidos (JSON decodificado)
-     * @return array Lista de errores. Vacío si no hay errores.
-     */
     public static function validarCrearEvento(array $data): array
     {
         $errores = [];
 
-        // --- Título ---
         if (empty($data['titulo']) || !is_string($data['titulo'])) {
             $errores['titulo'] = 'El título es obligatorio.';
         } elseif (mb_strlen(trim($data['titulo'])) < 5) {
@@ -26,14 +14,12 @@ class Validator
             $errores['titulo'] = 'El título no puede exceder 200 caracteres.';
         }
 
-        // --- Descripción ---
         if (empty($data['descripcion']) || !is_string($data['descripcion'])) {
             $errores['descripcion'] = 'La descripción es obligatoria.';
         } elseif (mb_strlen(trim($data['descripcion'])) < 10) {
             $errores['descripcion'] = 'La descripción debe tener al menos 10 caracteres.';
         }
 
-        // --- Fecha del evento ---
         if (empty($data['fecha_evento'])) {
             $errores['fecha_evento'] = 'La fecha del evento es obligatoria.';
         } else {
@@ -50,7 +36,6 @@ class Validator
             }
         }
 
-        // --- Hora (opcional) ---
         if (!empty($data['hora_evento'])) {
             $hora = DateTime::createFromFormat('H:i', $data['hora_evento'])
                 ?: DateTime::createFromFormat('H:i:s', $data['hora_evento']);
@@ -59,12 +44,10 @@ class Validator
             }
         }
 
-        // --- Categoría ---
         if (empty($data['categoria_id']) || !filter_var($data['categoria_id'], FILTER_VALIDATE_INT)) {
             $errores['categoria_id'] = 'Debe seleccionar una categoría válida.';
         }
 
-        // --- Aforo máximo ---
         if (!isset($data['aforo_maximo']) || !filter_var($data['aforo_maximo'], FILTER_VALIDATE_INT)) {
             $errores['aforo_maximo'] = 'El límite de aforo es obligatorio y debe ser un número entero.';
         } elseif ((int) $data['aforo_maximo'] <= 0) {
@@ -73,7 +56,6 @@ class Validator
             $errores['aforo_maximo'] = 'El límite de aforo ingresado no es razonable.';
         }
 
-        // --- Lugar (opcional pero recomendado) ---
         if (!empty($data['lugar']) && mb_strlen($data['lugar']) > 200) {
             $errores['lugar'] = 'El lugar no puede exceder 200 caracteres.';
         }
@@ -81,28 +63,20 @@ class Validator
         return $errores;
     }
 
-    // 
-
-    /**
-     * Valida los datos para enviar una reseña.
-     */
     public static function validarCrearResena(array $data): array
     {
         $errores = [];
 
-        // Validar ID del evento
         if (empty($data['evento_id']) || !filter_var($data['evento_id'], FILTER_VALIDATE_INT)) {
             $errores['evento_id'] = 'El ID del evento es inválido u obligatorio.';
         }
 
-        // Validar calificación (estrellas de 1 a 5)
         if (!isset($data['calificacion']) || !filter_var($data['calificacion'], FILTER_VALIDATE_INT)) {
             $errores['calificacion'] = 'La calificación es obligatoria.';
         } elseif ((int) $data['calificacion'] < 1 || (int) $data['calificacion'] > 5) {
             $errores['calificacion'] = 'La calificación debe estar entre 1 y 5 estrellas.';
         }
 
-        // Validar comentario (opcional, pero con límite)
         if (!empty($data['comentario']) && mb_strlen($data['comentario']) > 500) {
             $errores['comentario'] = 'El comentario no puede exceder los 500 caracteres.';
         }
@@ -110,4 +84,55 @@ class Validator
         return $errores;
     }
 
+    public static function validarRegistro(array $data): array
+        {
+            $errores = [];
+
+            if (empty($data['correo']) || !is_string($data['correo'])) {
+                $errores['correo'] = 'El correo es obligatorio.';
+            } elseif (!filter_var($data['correo'], FILTER_VALIDATE_EMAIL)) {
+                $errores['correo'] = 'El correo no tiene un formato válido.';
+            } elseif (!str_ends_with(strtolower($data['correo']), '@espol.edu.ec')) {
+                $errores['correo'] = 'Debe utilizar un correo institucional @espol.edu.ec.';
+            }
+
+            if (empty($data['contrasena']) || !is_string($data['contrasena'])) {
+                $errores['contrasena'] = 'La contraseña es obligatoria.';
+            } elseif (strlen($data['contrasena']) < 8) {
+                $errores['contrasena'] = 'La contraseña debe tener al menos 8 caracteres.';
+            }
+
+            $cargosPermitidos = [
+                'estudiante',
+                'administrativo',
+                'profesor'
+            ];
+
+            if (empty($data['cargo'])) {
+                $errores['cargo'] = 'El cargo es obligatorio.';
+            } elseif (!in_array($data['cargo'], $cargosPermitidos, true)) {
+                $errores['cargo'] = 'El cargo seleccionado no es válido.';
+            }
+
+            return $errores;
+        }
+
+        public static function validarLogin(array $data): array
+        {
+            $errores = [];
+
+            if (empty($data['correo']) || !is_string($data['correo'])) {
+                $errores['correo'] = 'El correo es obligatorio.';
+            } elseif (!filter_var($data['correo'], FILTER_VALIDATE_EMAIL)) {
+                $errores['correo'] = 'El correo no tiene un formato válido.';
+            }
+
+            if (empty($data['contrasena']) || !is_string($data['contrasena'])) {
+                $errores['contrasena'] = 'La contraseña es obligatoria.';
+            }
+
+            return $errores;
+        }
+
 }
+

@@ -4,15 +4,6 @@ require_once __DIR__ . '/../models/Catalogo.php';
 require_once __DIR__ . '/../models/Inscripcion.php';
 require_once __DIR__ . '/../helpers/Response.php';
 
-/**
- * Clase InscripcionController
- * Módulo: Exploración de catálogo, inscripción y pase digital
- * Responsable: Paulo Tapia
- *
- * Funcionalidades:
- *   - Explorar catálogo de eventos (listar / detalle)
- *   - Inscribirse a un evento (genera pase digital)
- */
 class InscripcionController
 {
     private Catalogo $catalogoModel;
