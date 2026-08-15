@@ -84,6 +84,7 @@ class Catalogo
                     c.nombre AS categoria,
                     e.aforo_maximo,
                     e.aforo_actual,
+                    e.organizador_id,
                     (e.aforo_maximo - e.aforo_actual) AS cupos_disponibles,
                     e.estado
                 FROM eventos e

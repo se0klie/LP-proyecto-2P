@@ -1,17 +1,11 @@
 <?php
 
-/**
- * Clase Database
- * Maneja una única conexión PDO reutilizable (patrón singleton)
- * para evitar abrir múltiples conexiones por request.
- */
 class Database
 {
     private static ?PDO $instance = null;
 
     private function __construct()
     {
-        // Constructor privado: no se permite instanciar directamente
     }
 
     public static function getConnection(): PDO
@@ -34,7 +28,6 @@ class Database
             try {
                 self::$instance = new PDO($dsn, DB_USER, DB_PASS, $options);
             } catch (PDOException $e) {
-                // No exponer detalles de conexión en la respuesta al cliente
                 error_log('Error de conexión a BD: ' . $e->getMessage());
                 throw new RuntimeException('No se pudo establecer conexión con la base de datos.');
             }

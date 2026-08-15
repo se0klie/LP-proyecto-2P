@@ -106,14 +106,22 @@ CREATE TABLE IF NOT EXISTS resenas (
 ) ENGINE=InnoDB;
 
 
+INSERT INTO usuarios (id, usuario, correo, contrasena, cargo)
+VALUES (
+    1,
+    'organizador',
+    'organizador@espol.edu.ec',
+    '$2y$10$example',
+    'administrativo'
+)
+ON DUPLICATE KEY UPDATE id = id;
 
--- ------------------------------------------------------------
--- Usuarios de prueba (password: "hash123")
--- ------------------------------------------------------------
-INSERT INTO usuarios (id, nombre, email, password_hash, rol) 
-VALUES (1, 'Organizador Demo', 'organizador@espol.edu.ec', 'hash123', 'organizador')
-ON DUPLICATE KEY UPDATE id=id;
-
-INSERT INTO usuarios (id, nombre, email, password_hash, rol) 
-VALUES (2, 'Estudiante Demo', 'estudiante@espol.edu.ec', 'hash123', 'estudiante')
-ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO usuarios (id, usuario, correo, contrasena, cargo)
+VALUES (
+    2,
+    'estudiante',
+    'estudiante@espol.edu.ec',
+    '$2y$10$example',
+    'estudiante'
+)
+ON DUPLICATE KEY UPDATE id = id;

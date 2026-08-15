@@ -1,0 +1,1127 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  CalendarDays,
+  ChevronRight,
+  CirclePlus,
+  Clock3,
+  MapPin,
+  Search,
+  Ticket,
+  Users,
+  X,
+  LayoutDashboard,
+  LogOut
+} from "lucide-react";
+
+import {
+  createEvent,
+  updateEvent,
+  getEvent,
+  getEvents,
+  userLogOut,
+  hasSession,
+  deleteEvent,
+  getStoredUser,
+  type CreateEventPayload,
+  type EventItem,
+  type AuthUser
+} from "./api";
+
+import Login from "./Login";
+import Register from "./Register";
+
+type View = "dashboard" | "create" | "edit";
+type Screen = "login" | "register" | "dashboard";
+
+const titleOf = (e: EventItem) =>
+  String(e.titulo ?? e.nombre ?? "Evento sin título");
+
+const dateOf = (e: EventItem) =>
+  String(e.fecha_evento ?? e.fecha ?? "");
+
+const placeOf = (e: EventItem) =>
+  String(e.lugar ?? e.ubicacion ?? "Por definir");
+
+function formatDate(value: string) {
+  if (!value) return "Fecha por definir";
+
+  const d = new Date(value);
+
+  if (Number.isNaN(d.getTime())) return value;
+
+  return new Intl.DateTimeFormat("es-EC", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  }).format(d);
+}
+
+function App() {
+  const [view, setView] = useState<View>("dashboard");
+
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [selected, setSelected] = useState<EventItem | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
+
+  const [search, setSearch] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const [error, setError] = useState("");
+
+  const [screen, setScreen] = useState<Screen>(() =>
+    hasSession() ? "dashboard" : "login"
+  );
+
+  const [user, setUser] = useState<AuthUser | null>(() =>
+    getStoredUser()
+  );  
+  async function loadEvents() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await getEvents(search);
+      setEvents(result);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudieron cargar los eventos."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (screen === "dashboard") {
+      void loadEvents();
+    }
+  }, [screen]);
+
+  async function openDetail(id: number) {
+    setSelected(null);
+    setDetailLoading(true);
+
+    try {
+      const event = await getEvent(id);
+      setSelected(event);
+      console.log("EVENTO:", event);
+      console.log("ORGANIZADOR ID:", event.organizador_id);
+      console.log("USUARIO:", user);
+      console.log("USER ID:", user?.id);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo cargar el detalle."
+      );
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  function startEditing(event: EventItem) {
+    setSelected(null);
+    setEditingEvent(event);
+    setView("edit");
+  }
+
+  function cancelEditing() {
+    setEditingEvent(null);
+    setView("dashboard");
+  }
+  async function handleDelete(event: EventItem) {
+    const confirmed = window.confirm(
+      `¿Estás seguro de que deseas eliminar "${titleOf(event)}"?`
+    );
+
+    if (!confirmed) return;
+
+    setError("");
+
+    try {
+      await deleteEvent(event.id);
+
+      setSelected(null);
+
+      setEvents(current =>
+        current.filter(e => e.id !== event.id)
+      );
+
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo eliminar el evento."
+      );
+    }
+  }
+
+  const stats = useMemo(() => {
+    const upcoming = events.filter(e => {
+      const d = new Date(dateOf(e));
+
+      return (
+        !Number.isNaN(d.getTime()) &&
+        d >= new Date()
+      );
+    }).length;
+
+    const capacity = events.reduce(
+      (sum, e) =>
+        sum +
+        Number(
+          e.aforo_maximo ??
+          e.cupos_disponibles ??
+          0
+        ),
+      0
+    );
+
+    return {
+      total: events.length,
+      upcoming,
+      capacity
+    };
+  }, [events]);
+
+  if (screen === "login") {
+    return (
+      <Login
+  onLogin={u => {
+    console.log("LOGIN RECIBIDO EN APP:", u);
+    console.log("TIPO:", typeof u);
+
+    setUser(u);
+    setScreen("dashboard");
+  }}
+  onSwitchToRegister={() =>
+    setScreen("register")
+  }
+/>
+    );
+  }
+
+  if (screen === "register") {
+    return (
+      <Register
+        onRegistered={u => {
+          setUser(u);
+          setScreen("dashboard");
+        }}
+        onSwitchToLogin={() =>
+          setScreen("login")
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="app-shell">
+
+      <aside className="sidebar">
+
+        <div className="brand">
+          <div className="brand-mark">
+            <CalendarDays size={21} />
+          </div>
+
+          <div>
+            <strong>Eventia</strong>
+            <span>Organizador</span>
+          </div>
+        </div>
+
+        <nav>
+
+          <button
+            className={
+              view === "dashboard"
+                ? "nav-item active"
+                : "nav-item"
+            }
+            onClick={() => {
+              setEditingEvent(null);
+              setView("dashboard");
+            }}
+          >
+            <LayoutDashboard size={18} />
+            Dashboard
+          </button>
+
+          <button
+            className={
+              view === "create"
+                ? "nav-item active"
+                : "nav-item"
+            }
+            onClick={() => {
+              setEditingEvent(null);
+              setView("create");
+            }}
+          >
+            <CirclePlus size={18} />
+            Crear evento
+          </button>
+
+        </nav>
+
+        <div className="sidebar-bottom">
+
+          <button
+            className="nav-item muted"
+            onClick={async () => {
+              try {
+                await userLogOut();
+              } finally {
+                setUser(null);
+                setScreen("login");
+              }
+            }}
+          >
+            <LogOut size={18} />
+            Cerrar sesión
+          </button>
+
+        </div>
+
+      </aside>
+
+      <main className="main">
+
+        <header className="topbar">
+
+          <div>
+            <p className="eyebrow">
+              PANEL ORGANIZADOR
+            </p>
+
+            <h1>
+              {view === "dashboard"
+                ? "Mis eventos"
+                : view === "create"
+                  ? "Crear evento"
+                  : "Editar evento"}
+            </h1>
+          </div>
+
+          {view === "dashboard" && (
+            <button
+              className="primary-button"
+              onClick={() => {
+                setEditingEvent(null);
+                setView("create");
+              }}
+            >
+              <CirclePlus size={18} />
+              Nuevo evento
+            </button>
+          )}
+
+        </header>
+
+        {view === "dashboard" ? (
+
+          <>
+            <section className="stats">
+
+              <Stat
+                icon={<Ticket size={20} />}
+                label="Eventos"
+                value={stats.total}
+              />
+
+              <Stat
+                icon={<CalendarDays size={20} />}
+                label="Próximos"
+                value={stats.upcoming}
+              />
+
+              <Stat
+                icon={<Users size={20} />}
+                label="Capacidad total"
+                value={stats.capacity || "—"}
+              />
+
+            </section>
+
+            <section className="toolbar">
+
+              <div className="search-box">
+                <Search size={18} />
+
+                <input
+                  value={search}
+                  placeholder="Buscar eventos..."
+                  onChange={e =>
+                    setSearch(e.target.value)
+                  }
+                  onKeyDown={e => {
+                    if (e.key === "Enter") {
+                      void loadEvents();
+                    }
+                  }}
+                />
+              </div>
+
+              <button
+                className="secondary-button"
+                onClick={() => void loadEvents()}
+              >
+                Buscar
+              </button>
+
+            </section>
+
+            {error && (
+              <div className="alert">
+                {error}
+              </div>
+            )}
+
+            {loading ? (
+
+              <div className="empty">
+                Cargando eventos...
+              </div>
+
+            ) : events.length === 0 ? (
+
+              <div className="empty">
+
+                <CalendarDays size={36} />
+
+                <h3>No hay eventos</h3>
+
+                <p>
+                  Crea tu primer evento para verlo aquí.
+                </p>
+
+                <button
+                  className="primary-button"
+                  onClick={() => setView("create")}
+                >
+                  <CirclePlus size={18} />
+                  Crear evento
+                </button>
+
+              </div>
+
+            ) : (
+
+              <section className="event-grid">
+
+                {events.map(event => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onClick={() =>
+                      void openDetail(event.id)
+                    }
+                  />
+                ))}
+
+              </section>
+
+            )}
+
+          </>
+
+        ) : view === "create" ? (
+
+          <CreateForm
+            onCancel={() =>
+              setView("dashboard")
+            }
+
+            onCreated={async event => {
+              setEvents(current => [
+                event,
+                ...current
+              ]);
+
+              setView("dashboard");
+
+              await openDetail(event.id);
+            }}
+          />
+
+        ) : (
+
+          <CreateForm
+            event={editingEvent}
+            onCancel={cancelEditing}
+            onUpdated={async updatedEvent => {
+
+              setEvents(current =>
+                current.map(event =>
+                  event.id === updatedEvent.id
+                    ? updatedEvent
+                    : event
+                )
+              );
+
+              setEditingEvent(null);
+              setView("dashboard");
+
+              await openDetail(updatedEvent.id);
+            }}
+          />
+
+        )}
+
+      </main>
+
+      {(selected || detailLoading) && (
+
+        <div
+          className="modal-backdrop"
+          onClick={() => setSelected(null)}
+        >
+
+          <div
+            className="detail-panel"
+            onClick={e =>
+              e.stopPropagation()
+            }
+          >
+
+            <button
+              className="close-button"
+              onClick={() =>
+                setSelected(null)
+              }
+            >
+              <X size={20} />
+            </button>
+
+            {detailLoading ? (
+
+              <div className="empty">
+                Cargando detalle.c..
+              </div>
+
+            ) : selected ? (
+
+              <EventDetail
+                event={selected}
+                user={user}
+                onEdit={() => startEditing(selected)}
+                onDelete={() => void handleDelete(selected)}
+              />
+
+            ) : null}
+
+          </div>
+
+        </div>
+
+      )}
+
+    </div>
+  );
+}
+
+function Stat({
+  icon,
+  label,
+  value
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="stat-card">
+
+      <div className="stat-icon">
+        {icon}
+      </div>
+
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+
+    </div>
+  );
+}
+
+function EventCard({
+  event,
+  onClick
+}: {
+  event: EventItem;
+  onClick: () => void;
+}) {
+  const capacity =
+    event.aforo_maximo ??
+    event.cupos_disponibles;
+
+  return (
+    <article
+      className="event-card"
+      onClick={onClick}
+    >
+
+      <div className="event-cover">
+
+        {event.imagen ? (
+          <img
+            src={event.imagen}
+            alt=""
+          />
+        ) : (
+          <CalendarDays size={32} />
+        )}
+
+        {event.estado && (
+          <span className="status">
+            {String(event.estado)}
+          </span>
+        )}
+
+      </div>
+
+      <div className="event-content">
+
+        <p className="category">
+          {String(
+            event.categoria ?? "EVENTO"
+          )}
+        </p>
+
+        <h3>
+          {titleOf(event)}
+        </h3>
+
+        <div className="event-meta">
+          <CalendarDays size={15} />
+          {formatDate(dateOf(event))}
+        </div>
+
+        <div className="event-meta">
+          <MapPin size={15} />
+          {placeOf(event)}
+        </div>
+
+        <div className="card-footer">
+
+          <span>
+            {capacity
+              ? `${capacity} cupos`
+              : "Ver detalles"}
+          </span>
+
+          <ChevronRight size={18} />
+
+        </div>
+
+      </div>
+
+    </article>
+  );
+}
+function EventDetail({
+  event,
+  user,
+  onEdit,
+  onDelete
+}: {
+  event: EventItem;
+  user: AuthUser | null;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div>
+
+      <div className="detail-hero">
+
+        {event.imagen ? (
+          <img
+            src={event.imagen}
+            alt=""
+          />
+        ) : (
+          <CalendarDays size={48} />
+        )}
+
+      </div>
+
+      <div className="detail-body">
+
+        <p className="category">
+          {String(
+            event.categoria ?? "EVENTO"
+          )}
+        </p>
+
+        <h2>
+          {titleOf(event)}
+        </h2>
+
+        <p className="description">
+          {String(
+            event.descripcion ??
+            "Sin descripción disponible."
+          )}
+        </p>
+
+        <div className="detail-info">
+
+          <Info
+            icon={<CalendarDays />}
+            label="Fecha"
+            value={formatDate(
+              dateOf(event)
+            )}
+          />
+
+          <Info
+            icon={<Clock3 />}
+            label="Hora"
+            value={String(
+              event.hora_evento ??
+              "Por definir"
+            )}
+          />
+
+          <Info
+            icon={<MapPin />}
+            label="Lugar"
+            value={placeOf(event)}
+          />
+
+          <Info
+            icon={<Users />}
+            label="Capacidad"
+            value={String(
+              event.aforo_maximo ??
+              event.cupos_disponibles ??
+              "No especificada"
+            )}
+          />
+
+        </div>
+
+       <div className="form-actions">
+
+      {Number(event.organizador_id) === Number(user?.id) && (
+        <button
+          type="button"
+          className="primary-button"
+          onClick={onEdit}
+        >
+          Editar evento
+        </button>
+)}
+        {Number(event.organizador_id) === Number(user?.id) && (
+          <button
+            type="button"
+            className="secondary-button delete-button"
+            onClick={onDelete}
+          >
+            Eliminar evento
+          </button>
+        )}
+
+      </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+function Info({
+  icon,
+  label,
+  value
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="info-row">
+
+      <div className="info-icon">
+        {icon}
+      </div>
+
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+
+    </div>
+  );
+}
+
+function CreateForm({
+  event,
+  onCancel,
+  onCreated,
+  onUpdated
+}: {
+  event?: EventItem | null;
+  onCancel: () => void;
+  onCreated?: (event: EventItem) => void;
+  onUpdated?: (event: EventItem) => void;
+}) {
+
+  const isEditing = Boolean(event);
+
+  const normalizeOptionalString = (
+    value: unknown
+  ): string => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "";
+    }
+
+    return typeof value === "string"
+      ? value
+      : String(value);
+  };
+
+  const normalizeOptionalNumber = (
+    value: unknown
+  ): number | undefined => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return undefined;
+    }
+
+    const parsed = Number(value);
+
+    return Number.isFinite(parsed)
+      ? parsed
+      : undefined;
+  };
+
+  const [form, setForm] =
+    useState<CreateEventPayload>({
+      titulo: normalizeOptionalString(
+        event?.titulo
+      ),
+      descripcion: normalizeOptionalString(
+        event?.descripcion
+      ),
+      fecha_evento:
+        normalizeOptionalString(
+          event?.fecha_evento
+        ),
+      hora_evento:
+        normalizeOptionalString(
+          event?.hora_evento
+        ),
+      lugar:
+        normalizeOptionalString(
+          event?.lugar ?? event?.ubicacion
+        ),
+      categoria_id:
+        normalizeOptionalNumber(
+          event?.categoria_id
+        ),
+      aforo_maximo:
+        normalizeOptionalNumber(
+          event?.aforo_maximo
+        )
+    });
+
+  const categorias = {
+    1: "Académico",
+    2: "Bienestar Estudiantil",
+    3: "Cultural",
+    4: "Tecnológico",
+    5: "Voluntariado"
+  };
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const update = (
+    key: keyof CreateEventPayload,
+    value: string
+  ) => {
+
+    setForm(current => ({
+      ...current,
+
+      [key]:
+        ["categoria_id", "aforo_maximo"]
+          .includes(key)
+          ? value === ""
+            ? undefined
+            : Number(value)
+          : value
+    }));
+
+  };
+
+  async function submit(
+    e: React.FormEvent
+  ) {
+    e.preventDefault();
+
+    setError("");
+    setSaving(true);
+
+    try {
+
+      if (isEditing && event) {
+
+        const updated =
+          await updateEvent(
+            event.id,
+            form
+          );
+
+        onUpdated?.(updated);
+
+      } else {
+
+        const created =
+          await createEvent(form);
+
+        onCreated?.(created);
+
+      }
+
+    } catch (err) {
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : isEditing
+            ? "No se pudo actualizar el evento."
+            : "No se pudo crear el evento."
+      );
+
+    } finally {
+
+      setSaving(false);
+
+    }
+  }
+
+  return (
+    <form
+      className="create-form"
+      onSubmit={submit}
+    >
+
+      {error && (
+        <div className="alert">
+          {error}
+        </div>
+      )}
+
+      <div className="form-section">
+
+        <h2>
+          {isEditing
+            ? "Editar evento"
+            : "Información del evento"}
+        </h2>
+
+        <p>
+          {isEditing
+            ? "Modifica los datos de tu evento."
+            : "Completa los datos principales para publicar tu evento."}
+        </p>
+
+      </div>
+
+      <div className="form-grid">
+
+        <label className="full">
+          Título
+
+          <input
+            required
+            value={form.titulo}
+            onChange={e =>
+              update(
+                "titulo",
+                e.target.value
+              )
+            }
+            placeholder="Ej. Conferencia de tecnología"
+          />
+
+        </label>
+
+        <label className="full">
+          Descripción
+
+          <textarea
+            required
+            rows={5}
+            value={form.descripcion}
+            onChange={e =>
+              update(
+                "descripcion",
+                e.target.value
+              )
+            }
+            placeholder="Describe el evento..."
+          />
+
+        </label>
+
+        <label>
+          Fecha
+
+          <input
+            required
+            type="date"
+            value={form.fecha_evento}
+            onChange={e =>
+              update(
+                "fecha_evento",
+                e.target.value
+              )
+            }
+          />
+
+        </label>
+
+        <label>
+          Hora
+
+          <input
+            required
+            type="time"
+            value={form.hora_evento}
+            onChange={e =>
+              update(
+                "hora_evento",
+                e.target.value
+              )
+            }
+          />
+
+        </label>
+
+        <label className="full">
+          Ubicación
+
+          <input
+            required
+            value={form.lugar}
+            onChange={e =>
+              update(
+                "lugar",
+                e.target.value
+              )
+            }
+            placeholder="Lugar del evento"
+          />
+
+        </label>
+
+        <label>
+          Categoría
+
+          <select
+            required
+            value={
+              form.categoria_id ?? ""
+            }
+            onChange={e =>
+              update(
+                "categoria_id",
+                e.target.value
+              )
+            }
+          >
+
+            <option value="">
+              Selecciona una categoría
+            </option>
+
+            {Object.entries(
+              categorias
+            ).map(
+              ([id, nombre]) => (
+                <option
+                  key={id}
+                  value={id}
+                >
+                  {nombre}
+                </option>
+              )
+            )}
+
+          </select>
+
+        </label>
+
+        <label>
+          Capacidad
+
+          <input
+            required
+            type="number"
+            min="1"
+            value={
+              form.aforo_maximo ?? ""
+            }
+            onChange={e =>
+              update(
+                "aforo_maximo",
+                e.target.value
+              )
+            }
+          />
+
+        </label>
+
+      </div>
+
+      <div className="form-actions">
+
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={onCancel}
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="submit"
+          className="primary-button"
+          disabled={saving}
+        >
+          {saving
+            ? isEditing
+              ? "Guardando..."
+              : "Creando..."
+            : isEditing
+              ? "Guardar cambios"
+              : "Crear evento"}
+        </button>
+
+      </div>
+
+    </form>
+  );
+}
+
+export default App;

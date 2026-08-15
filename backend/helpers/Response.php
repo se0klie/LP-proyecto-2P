@@ -1,9 +1,5 @@
 <?php
 
-/**
- * Clase Response
- * Estandariza el formato de las respuestas JSON de la API.
- */
 class Response
 {
     public static function json(array $payload, int $statusCode = 200): void
