@@ -19,7 +19,7 @@ export type EventItem = {
   [key: string]: unknown;
 };
 
-const BACKEND_URL = ((import.meta as any).env?.VITE_BACKEND_URL as string) ?? "";
+const BACKEND_URL = ((import.meta as any).env?.VITE_BACKEND_URL as string) ?? "/api";
 
 const SESSION_FLAG = "eventia_authenticated";
 const USER_KEY = "eventia_user";
@@ -220,4 +220,32 @@ export async function userLogOut(): Promise<void> {
   } finally {
     clearSession();
   }
+}
+
+
+
+export type CreateResenaPayload = {
+  evento_id: number;
+  calificacion: number;
+  comentario: string;
+};
+
+export type ReporteData = {
+  total_inscritos: number;
+  asistencia_final: number;
+  porcentaje_asistencia: string;
+  valoracion_promedio: string;
+};
+
+export async function createResena(payload: CreateResenaPayload) {
+  const data = await request<any>(`${BACKEND_URL}/resenas/crear.php`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  return data;
+}
+
+export async function getReporte(eventoId: number): Promise<ReporteData> {
+  const data = await request<any>(`${BACKEND_URL}/eventos/reporte.php?evento_id=${eventoId}`);
+  return data.data ?? data;
 }
