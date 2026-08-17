@@ -65,10 +65,14 @@ function App() {
   const [view, setView] = useState<View>("dashboard");
 
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [categories, setCategories] = useState<{ id: number; nombre: string }[]>([]);
+
   const [selected, setSelected] = useState<EventItem | null>(null);
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
 
   const [search, setSearch] = useState("");
+
+  const [selectedCategory, setSelectedCategory] = useState<number | undefined>();
 
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -81,14 +85,15 @@ function App() {
 
   const [user, setUser] = useState<AuthUser | null>(() =>
     getStoredUser()
-  );  
+  );
   async function loadEvents() {
     setLoading(true);
     setError("");
 
     try {
-      const result = await getEvents(search);
-      setEvents(result);
+      const { eventos, categorias } = await getEvents(search, selectedCategory);
+      setEvents(eventos);
+      if (categorias.length > 0) setCategories(categorias);
     } catch (err) {
       setError(
         err instanceof Error
@@ -196,17 +201,17 @@ function App() {
   if (screen === "login") {
     return (
       <Login
-  onLogin={u => {
-    console.log("LOGIN RECIBIDO EN APP:", u);
-    console.log("TIPO:", typeof u);
+        onLogin={u => {
+          console.log("LOGIN RECIBIDO EN APP:", u);
+          console.log("TIPO:", typeof u);
 
-    setUser(u);
-    setScreen("dashboard");
-  }}
-  onSwitchToRegister={() =>
-    setScreen("register")
-  }
-/>
+          setUser(u);
+          setScreen("dashboard");
+        }}
+        onSwitchToRegister={() =>
+          setScreen("register")
+        }
+      />
     );
   }
 
@@ -372,11 +377,26 @@ function App() {
                 />
               </div>
 
+              <select
+                className="secondary-button"
+                style={{ height: "42px", padding: "0 12px", cursor: "pointer" }}
+                value={selectedCategory ?? ""}
+                onChange={e => {
+                  const val = e.target.value ? Number(e.target.value) : undefined;
+                  setSelectedCategory(val);
+                }}
+              >
+                <option value="">Todas las categorías</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+
               <button
                 className="secondary-button"
                 onClick={() => void loadEvents()}
               >
-                Buscar
+                Filtrar
               </button>
 
             </section>
@@ -643,11 +663,32 @@ function EventDetail({
 }) {
   const [showReporte, setShowReporte] = useState(false);
   const [showResena, setShowResena] = useState(false);
-  
+
+  const [inscripcion, setInscripcion] = useState<InscripcionData | null>(null);
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrollError, setEnrollError] = useState("");
+
   // Guardamos en variables si el usuario es organizador de este evento o si es estudiante
   const isOrganizador = Number(event.organizador_id) === Number(user?.id);
   const isEstudiante = !isOrganizador && Boolean(user?.id); // Si está logueado pero no es el organizador
 
+  async function handleInscription() {
+    setEnrollError("");
+    setEnrolling(true);
+
+    try {
+      const result = await createInscripcion(event.id);
+      setInscripcion(result);
+    } catch (err) {
+      setEnrollError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo completar la inscripción."
+      );
+    } finally {
+      setEnrolling(false);
+    }
+  }
   return (
     <div>
       {/* Modales de Christian flotando sobre el detalle */}
@@ -723,52 +764,72 @@ function EventDetail({
 
         </div>
 
-       <div className="form-actions" style={{ flexWrap: "wrap" }}>
-        
-        {/* BOTÓN DE CHRISTIAN: Solo para organizadores */}
-        {isOrganizador && (
-          <button 
-            type="button" 
-            className="secondary-button" 
-            style={{ borderColor: "#1d4ed8", color: "#1d4ed8" }} 
-            onClick={() => setShowReporte(true)}
-          >
-            <BarChart3 size={18} /> Ver Reporte Estadístico
-          </button>
-        )}
+        <div className="form-actions" style={{ flexWrap: "wrap" }}>
 
-        {isOrganizador && (
-          <button
-            type="button"
-            className="primary-button"
-            onClick={onEdit}
-          >
-            Editar evento
-          </button>
-        )}
+          {/* BOTÓN DE CHRISTIAN: Solo para organizadores */}
+          {isOrganizador && (
+            <button
+              type="button"
+              className="secondary-button"
+              style={{ borderColor: "#1d4ed8", color: "#1d4ed8" }}
+              onClick={() => setShowReporte(true)}
+            >
+              <BarChart3 size={18} /> Ver Reporte Estadístico
+            </button>
+          )}
 
-        {isOrganizador && (
-          <button
-            type="button"
-            className="secondary-button delete-button"
-            onClick={onDelete}
-          >
-            Eliminar evento
-          </button>
-        )}
+          {isOrganizador && (
+            <button
+              type="button"
+              className="primary-button"
+              onClick={onEdit}
+            >
+              Editar evento
+            </button>
+          )}
 
-        {/* BOTÓN DE CHRISTIAN: Solo para asistentes/estudiantes */}
-        {isEstudiante && (
-          <button 
-            type="button" 
-            className="primary-button" 
-            onClick={() => setShowResena(true)}
-          >
-            <Star size={18} /> Dejar una Reseña
-          </button>
-        )}
+          {isOrganizador && (
+            <button
+              type="button"
+              className="secondary-button delete-button"
+              onClick={onDelete}
+            >
+              Eliminar evento
+            </button>
+          )}
 
-      </div>
+          {isEstudiante && (
+            <button
+              type="button"
+              className={inscripcion ? "secondary-button" : "primary-button"}
+              disabled={Boolean(inscripcion) || enrolling || registrationClosed}
+              onClick={() => void handleInscription()}
+            >
+              <Ticket size={18} />
+              {inscripcion
+                ? "Inscripción confirmada"
+                : enrolling
+                  ? "Inscribiendo..."
+                  : noSpotsAvailable
+                    ? "Cupos agotados"
+                    : eventStatus !== "activo"
+                      ? "Inscripciones cerradas"
+                      : "Inscribirse al evento"}
+            </button>
+          )}
+
+          {/* BOTÓN DE CHRISTIAN: Solo para asistentes/estudiantes */}
+          {isEstudiante && (
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => setShowResena(true)}
+            >
+              <Star size={18} /> Dejar una Reseña
+            </button>
+          )}
+
+        </div>
 
       </div>
 
@@ -1184,7 +1245,7 @@ function ReporteModal({ eventId, onClose }: { eventId: number; onClose: () => vo
         <div className="detail-body">
           <p className="category">ESTADÍSTICAS</p>
           <h2>Reporte del Evento</h2>
-          
+
           {loading ? <div className="empty">Calculando métricas...</div> : error ? <div className="alert">{error}</div> : reporte && (
             <div className="stats" style={{ gridTemplateColumns: "repeat(2, 1fr)", marginTop: "20px" }}>
               <Stat icon={<Users size={20} />} label="Total Inscritos" value={reporte.total_inscritos} />
@@ -1209,7 +1270,7 @@ function ResenaModal({ eventId, onClose }: { eventId: number; onClose: () => voi
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (calificacion === 0) return setError("Por favor selecciona una calificación de 1 a 5 estrellas.");
-    
+
     setError(""); setSaving(true);
     try {
       await createResena({ evento_id: eventId, calificacion, comentario });
@@ -1229,7 +1290,7 @@ function ResenaModal({ eventId, onClose }: { eventId: number; onClose: () => voi
         <div className="detail-body">
           <h2>Deja tu reseña</h2>
           <p className="description">Tu opinión nos ayuda a mejorar los próximos eventos en ESPOL.</p>
-          
+
           {success ? (
             <div className="alert" style={{ background: "#eef3ff", color: "#1d4ed8", borderColor: "#7190dc" }}>
               ¡Gracias! Tu reseña se envió exitosamente.
@@ -1237,30 +1298,30 @@ function ResenaModal({ eventId, onClose }: { eventId: number; onClose: () => voi
           ) : (
             <form className="create-form" style={{ padding: 0, border: "none" }} onSubmit={submit}>
               {error && <div className="alert">{error}</div>}
-              
+
               <div className="form-grid" style={{ gridTemplateColumns: "1fr" }}>
                 <label>
                   Calificación general
                   <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
                     {[1, 2, 3, 4, 5].map(num => (
-                      <Star 
-                        key={num} 
-                        size={32} 
-                        fill={calificacion >= num ? "#f59e0b" : "transparent"} 
-                        color={calificacion >= num ? "#f59e0b" : "#d9dee5"} 
+                      <Star
+                        key={num}
+                        size={32}
+                        fill={calificacion >= num ? "#f59e0b" : "transparent"}
+                        color={calificacion >= num ? "#f59e0b" : "#d9dee5"}
                         style={{ cursor: "pointer" }}
                         onClick={() => setCalificacion(num)}
                       />
                     ))}
                   </div>
                 </label>
-                
+
                 <label className="full">
                   Comentario (Opcional)
                   <textarea rows={4} value={comentario} onChange={e => setComentario(e.target.value)} placeholder="¿Qué te pareció el evento?" maxLength={500} />
                 </label>
               </div>
-              
+
               <div className="form-actions">
                 <button type="button" className="secondary-button" onClick={onClose}>Cancelar</button>
                 <button type="submit" className="primary-button" disabled={saving}>{saving ? "Enviando..." : "Enviar reseña"}</button>

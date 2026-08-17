@@ -19,6 +19,20 @@ export type EventItem = {
   [key: string]: unknown;
 };
 
+export type InscripcionData = {
+  inscripcion_id: number;
+  codigo_pase: string;
+  estado: string;
+  evento: {
+    id: number;
+    titulo: string;
+    fecha_evento?: string;
+    hora_evento?: string;
+    lugar?: string;
+  };
+};
+
+
 const BACKEND_URL = ((import.meta as any).env?.VITE_BACKEND_URL as string) ?? "/api";
 
 const SESSION_FLAG = "eventia_authenticated";
@@ -107,15 +121,32 @@ function unwrapEvent(data: any): EventItem {
   return data?.data ?? data?.evento ?? data;
 }
 
-export async function getEvents(search = "") {
-  const query = search ? `?busqueda=${encodeURIComponent(search)}` : "";
+export async function getEvents(search = "", categoriaId?: number) {
+  const params = new URLSearchParams();
+  if (search) params.append("busqueda", search);
+  if (categoriaId) params.append("categoria_id", categoriaId.toString());
+
+  const query = params.toString() ? `?${params.toString()}` : "";
   const data = await request<any>(`${BACKEND_URL}/eventos/catalogo.php${query}`);
-  return unwrapEvents(data.data.eventos);
+  
+  return {
+    eventos: unwrapEvents(data.data.eventos),
+    categorias: (data.data.categorias ?? []) as { id: number; nombre: string }[]
+  };
 }
 
 export async function getEvent(id: number) {
   const data = await request<any>(`${BACKEND_URL}/eventos/detalle.php?id=${id}`);
   return unwrapEvent(data);
+}
+
+export async function createInscripcion(eventoId: number): Promise<InscripcionData> {
+  const data = await request<any>(`${BACKEND_URL}/inscripciones/crear.php`, {
+    method: "POST",
+    body: JSON.stringify({ evento_id: eventoId })
+  });
+
+  return (data?.data ?? data) as InscripcionData;
 }
 
 export async function deleteEvent(id: number): Promise<void> {
