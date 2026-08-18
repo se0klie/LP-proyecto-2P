@@ -74,7 +74,7 @@ class InscripcionController
     public function inscribir(int $estudianteId): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-
+        print($input);
         if (!is_array($input)) {
             Response::error('El cuerpo de la petición debe ser un JSON válido.', 400);
         }
