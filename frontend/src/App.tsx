@@ -26,6 +26,8 @@ import {
   getStoredUser,
   createResena,
   getReporte,
+  createInscripcion,
+  InscripcionData,
   type CreateEventPayload,
   type EventItem,
   type AuthUser,
@@ -37,6 +39,7 @@ import Register from "./Register";
 
 type View = "dashboard" | "create" | "edit";
 type Screen = "login" | "register" | "dashboard";
+
 
 const titleOf = (e: EventItem) =>
   String(e.titulo ?? e.nombre ?? "Evento sin título");
@@ -671,6 +674,12 @@ function EventDetail({
   // Guardamos en variables si el usuario es organizador de este evento o si es estudiante
   const isOrganizador = Number(event.organizador_id) === Number(user?.id);
   const isEstudiante = !isOrganizador && Boolean(user?.id); // Si está logueado pero no es el organizador
+  const eventStatus = String(
+    (event as EventItem & { estado?: string }).estado ?? "activo"
+  ).toLowerCase();
+  const noSpotsAvailable =
+    event.cupos_disponibles != null && Number(event.cupos_disponibles) <= 0;
+  const registrationClosed = eventStatus !== "activo" || noSpotsAvailable;
 
   async function handleInscription() {
     setEnrollError("");
