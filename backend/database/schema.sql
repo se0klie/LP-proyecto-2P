@@ -125,3 +125,34 @@ VALUES (
     'estudiante'
 )
 ON DUPLICATE KEY UPDATE id = id;
+
+CREATE TABLE IF NOT EXISTS inscripciones (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    evento_id INT UNSIGNED NOT NULL,
+    estudiante_id INT UNSIGNED NOT NULL,
+
+    codigo_pase VARCHAR(20) NOT NULL,
+    estado ENUM('valido', 'usado', 'cancelado') NOT NULL DEFAULT 'valido',
+
+    fecha_inscripcion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_inscripciones_evento
+        FOREIGN KEY (evento_id)
+        REFERENCES eventos(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_inscripciones_estudiante
+        FOREIGN KEY (estudiante_id)
+        REFERENCES usuarios(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    CONSTRAINT uq_inscripcion_estudiante_evento
+        UNIQUE (evento_id, estudiante_id),
+
+    CONSTRAINT uq_codigo_pase
+        UNIQUE (codigo_pase)
+) ENGINE=InnoDB;
+

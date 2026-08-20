@@ -140,10 +140,23 @@ export async function getEvent(id: number) {
   return unwrapEvent(data);
 }
 
+export async function getInscripcionesFromUser(userId: number) {
+  const data = await request<any>(
+    `${BACKEND_URL}/inscripciones/get_inscripciones.php?estudiante_id=${userId}`,
+    {
+      method: "GET",
+      credentials: "include"
+    }
+  );
+
+  return data;
+}
+
 export async function createInscripcion(eventoId: number): Promise<InscripcionData> {
   const data = await request<any>(`${BACKEND_URL}/inscripciones/crear.php`, {
     method: "POST",
-    body: JSON.stringify({ evento_id: eventoId })
+    body: JSON.stringify({ evento_id: eventoId }),
+    credentials: "include"
   });
 
   return (data?.data ?? data) as InscripcionData;

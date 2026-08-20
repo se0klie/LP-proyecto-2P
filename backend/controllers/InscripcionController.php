@@ -15,6 +15,11 @@ class InscripcionController
         $this->inscripcionModel = new Inscripcion();
     }
 
+    public function getByEstudiante(int $estudianteId): array
+    {
+        return $this->inscripcionModel->getByEstudiante($estudianteId);
+    }
+
     /**
      * GET /api/eventos/catalogo.php
      * Query params opcionales:
@@ -71,10 +76,9 @@ class InscripcionController
      * Body JSON esperado:
      * { "evento_id": 1 }
      */
-    public function inscribir(int $estudianteId): void
-    {
+    public function inscribir(int $estudianteId): void{
+        
         $input = json_decode(file_get_contents('php://input'), true);
-        print($input);
         if (!is_array($input)) {
             Response::error('El cuerpo de la petición debe ser un JSON válido.', 400);
         }
@@ -91,6 +95,7 @@ class InscripcionController
             $resultado = $this->inscripcionModel->inscribir($eventoId, $estudianteId);
             Response::success($resultado, 'Inscripción confirmada. Pase digital generado.', 201);
         } catch (RuntimeException $e) {
+            print($e->getMessage());
             switch ($e->getMessage()) {
                 case 'EVENTO_NO_EXISTE':
                     Response::error('El evento solicitado no existe.', 404);

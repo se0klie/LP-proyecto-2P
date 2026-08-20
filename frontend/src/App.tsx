@@ -28,6 +28,7 @@ import {
   getReporte,
   createInscripcion,
   InscripcionData,
+  getInscripcionesFromUser,
   type CreateEventPayload,
   type EventItem,
   type AuthUser,
@@ -122,9 +123,6 @@ function App() {
       const event = await getEvent(id);
       setSelected(event);
       console.log("EVENTO:", event);
-      console.log("ORGANIZADOR ID:", event.organizador_id);
-      console.log("USUARIO:", user);
-      console.log("USER ID:", user?.id);
     } catch (err) {
       setError(
         err instanceof Error
@@ -187,7 +185,6 @@ function App() {
       (sum, e) =>
         sum +
         Number(
-          e.aforo_maximo ??
           e.cupos_disponibles ??
           0
         ),
@@ -355,7 +352,7 @@ function App() {
 
               <Stat
                 icon={<Users size={20} />}
-                label="Capacidad total"
+                label="Cupos disponibles"
                 value={stats.capacity || "—"}
               />
 
@@ -586,8 +583,8 @@ function EventCard({
   onClick: () => void;
 }) {
   const capacity =
-    event.aforo_maximo ??
-    event.cupos_disponibles;
+    event.cupos_disponibles ??
+    0;
 
   return (
     <article
@@ -667,8 +664,10 @@ function EventDetail({
   const [showReporte, setShowReporte] = useState(false);
   const [showResena, setShowResena] = useState(false);
 
+  const [inscripciones, setInscripciones] = useState([]);
   const [inscripcion, setInscripcion] = useState<InscripcionData | null>(null);
   const [enrolling, setEnrolling] = useState(false);
+  const [enrolled, setEnrolled] = useState(false);
   const [enrollError, setEnrollError] = useState("");
 
   // Guardamos en variables si el usuario es organizador de este evento o si es estudiante
@@ -681,6 +680,12 @@ function EventDetail({
     event.cupos_disponibles != null && Number(event.cupos_disponibles) <= 0;
   const registrationClosed = eventStatus !== "activo" || noSpotsAvailable;
 
+  useEffect(() => {
+    if (user) {
+      void getInscripciones();
+    }
+  }, [user, event.id]);
+
   async function handleInscription() {
     setEnrollError("");
     setEnrolling(true);
@@ -688,6 +693,23 @@ function EventDetail({
     try {
       const result = await createInscripcion(event.id);
       setInscripcion(result);
+    } catch (err) {
+      setEnrollError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo completar la inscripción."
+      );
+    } finally {
+      setEnrolling(false);
+    }
+  }
+
+  async function getInscripciones() {
+    try {
+      const inscripciones = await getInscripcionesFromUser(user!.id);
+      setInscripciones(inscripciones);
+      console.log('INSC', inscripciones)
+
     } catch (err) {
       setEnrollError(
         err instanceof Error
@@ -763,9 +785,8 @@ function EventDetail({
 
           <Info
             icon={<Users />}
-            label="Capacidad"
+            label="Cupos disponibles"
             value={String(
-              event.aforo_maximo ??
               event.cupos_disponibles ??
               "No especificada"
             )}
@@ -811,7 +832,7 @@ function EventDetail({
             <button
               type="button"
               className={inscripcion ? "secondary-button" : "primary-button"}
-              disabled={Boolean(inscripcion) || enrolling || registrationClosed}
+              disabled={Boolean(inscripcion) || enrolling || enrolled ||registrationClosed}
               onClick={() => void handleInscription()}
             >
               <Ticket size={18} />
@@ -819,6 +840,8 @@ function EventDetail({
                 ? "Inscripción confirmada"
                 : enrolling
                   ? "Inscribiendo..."
+                  : enrolled ?
+                  "Inscrito" 
                   : noSpotsAvailable
                     ? "Cupos agotados"
                     : eventStatus !== "activo"
@@ -919,8 +942,12 @@ function CreateForm({
       : undefined;
   };
 
+  type EventFormPayload = CreateEventPayload & {
+    cupos_disponibles?: number;
+  };
+
   const [form, setForm] =
-    useState<CreateEventPayload>({
+    useState<EventFormPayload>({
       titulo: normalizeOptionalString(
         event?.titulo
       ),
@@ -943,9 +970,9 @@ function CreateForm({
         normalizeOptionalNumber(
           event?.categoria_id
         ),
-      aforo_maximo:
+      cupos_disponibles:
         normalizeOptionalNumber(
-          event?.aforo_maximo
+          event?.cupos_disponibles
         )
     });
 
@@ -1182,14 +1209,14 @@ function CreateForm({
         </label>
 
         <label>
-          Capacidad
+          Cupos disponibles
 
           <input
             required
             type="number"
             min="1"
             value={
-              form.aforo_maximo ?? ""
+              form.cupos_disponibles ?? ""
             }
             onChange={e =>
               update(

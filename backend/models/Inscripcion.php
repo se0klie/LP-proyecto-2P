@@ -85,7 +85,6 @@ class Inscripcion
             $stmtUpdate->execute(['id' => $eventoId]);
 
             $this->db->commit();
-
             return [
                 'inscripcion_id' => $inscripcionId,
                 'codigo_pase'    => $codigoPase,
@@ -141,3 +140,4 @@ class Inscripcion
         return $stmt->fetchAll();
     }
 }
+
