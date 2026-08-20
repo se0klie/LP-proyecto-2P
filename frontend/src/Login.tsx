@@ -31,7 +31,17 @@ export default function Login({
   }
 
   return (
-    <div className="auth-shell">
+   <div
+        className="auth-shell"
+        style={{
+          minHeight: "100vh",
+          padding: "40px",
+          boxSizing: "border-box",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
       <div className="auth-card">
         <div className="brand auth-brand">
           <div className="brand-mark"><CalendarDays size={21} /></div>
