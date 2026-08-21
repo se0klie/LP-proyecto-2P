@@ -62,6 +62,7 @@ class Inscripcion
                 'evento_id'     => $eventoId,
                 'estudiante_id' => $estudianteId,
             ]);
+            
             if ($stmtCheck->fetch()) {
                 throw new RuntimeException('YA_INSCRITO');
             }

@@ -95,7 +95,6 @@ class InscripcionController
             $resultado = $this->inscripcionModel->inscribir($eventoId, $estudianteId);
             Response::success($resultado, 'Inscripción confirmada. Pase digital generado.', 201);
         } catch (RuntimeException $e) {
-            print($e->getMessage());
             switch ($e->getMessage()) {
                 case 'EVENTO_NO_EXISTE':
                     Response::error('El evento solicitado no existe.', 404);

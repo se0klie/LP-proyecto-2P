@@ -132,3 +132,11 @@ h3 { margin: 7px 0 12px; font-size: 18px; }
 .delete-button:hover {
   background: #fef2f2;
 }
+.disabled-button {
+   background: #aeadad;
+   border-radius: 8px; padding: 10px 15px; 
+   display: inline-flex; 
+   align-items: center; 
+   justify-content: center;
+  gap: 8px; border: 1px solid transparent; 
+}

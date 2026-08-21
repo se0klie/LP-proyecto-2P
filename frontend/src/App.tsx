@@ -604,9 +604,12 @@ function EventCard({
         )}
 
         {event.estado && (
-          <span className="status">
-            {String(event.estado)}
-          </span>
+          <div>
+            <span className="status">
+                {String(event.estado)}
+              </span>
+              
+            </div>
         )}
 
       </div>
@@ -684,7 +687,16 @@ function EventDetail({
     if (user) {
       void getInscripciones();
     }
+
   }, [user, event.id]);
+
+  useEffect(() => {
+    if(inscripciones){
+      const exists = inscripciones.some((inscripcion: { evento_id: number; }) => inscripcion.evento_id === event.id);
+      setEnrolled(exists)
+    }
+  }, [inscripciones, event.id]);
+
 
   async function handleInscription() {
     setEnrollError("");
@@ -706,10 +718,9 @@ function EventDetail({
 
   async function getInscripciones() {
     try {
-      const inscripciones = await getInscripcionesFromUser(user!.id);
-      setInscripciones(inscripciones);
-      console.log('INSC', inscripciones)
-
+      const inscripciones = await getInscripcionesFromUser(user!.id - 1);
+      setInscripciones(inscripciones?.data);
+      console.log("inscripciones:", inscripciones?.data);
     } catch (err) {
       setEnrollError(
         err instanceof Error
@@ -720,6 +731,8 @@ function EventDetail({
       setEnrolling(false);
     }
   }
+
+
   return (
     <div>
       {/* Modales de Christian flotando sobre el detalle */}
@@ -831,7 +844,7 @@ function EventDetail({
           {isEstudiante && (
             <button
               type="button"
-              className={inscripcion ? "secondary-button" : "primary-button"}
+              className={inscripcion ? "secondary-button" : enrolled ? 'disabled-button' : "primary-button"}
               disabled={Boolean(inscripcion) || enrolling || enrolled ||registrationClosed}
               onClick={() => void handleInscription()}
             >

@@ -164,6 +164,5 @@ class Evento
         return $stmt->rowCount() > 0;
     }
 
-    pub
 }
 
