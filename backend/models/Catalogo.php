@@ -28,43 +28,67 @@ class Catalogo
      * @param string      $estado     Estado del evento a listar (por defecto "activo")
      * @return array
      */
-    public function listar(?string $busqueda = null, ?int $categoriaId = null, string $estado = 'activo'): array
-    {
-        $sql = 'SELECT
-                    e.id,
-                    e.titulo,
-                    e.descripcion,
-                    e.fecha_evento,
-                    e.hora_evento,
-                    e.lugar,
-                    c.id AS categoria_id,
-                    c.nombre AS categoria,
-                    e.aforo_maximo,
-                    e.aforo_actual,
-                    (e.aforo_maximo - e.aforo_actual) AS cupos_disponibles,
-                    e.estado
-                FROM eventos e
-                JOIN categorias c ON c.id = e.categoria_id
-                WHERE e.estado = :estado';
+    public function listar(
+        ?string $busqueda = null,
+        ?int $categoriaId = null,
+        string $estado = 'activo'
+    ): array {
+        try {
+            $sql = 'SELECT
+                e.id,
+                e.titulo,
+                e.descripcion,
+                e.fecha_evento,
+                e.hora_evento,
+                e.lugar,
+                c.id AS categoria_id,
+                c.nombre AS categoria,
+                e.aforo_maximo,
+                e.aforo_actual,
+                (e.aforo_maximo - e.aforo_actual) AS cupos_disponibles,
+                e.estado
+            FROM eventos e
+            JOIN categorias c ON c.id = e.categoria_id
+            WHERE e.estado = :estado';
 
-        $params = ['estado' => $estado];
+            $params = [
+                'estado' => $estado
+            ];
 
-        if (!empty($busqueda)) {
-            $sql .= ' AND (e.titulo LIKE :busqueda OR e.lugar LIKE :busqueda)';
-            $params['busqueda'] = '%' . trim($busqueda) . '%';
+            if (!empty($busqueda)) {
+                $sql .= ' AND (
+                    e.titulo LIKE :busqueda_titulo
+                    OR e.lugar LIKE :busqueda_lugar
+                )';
+
+                $valorBusqueda = '%' . trim($busqueda) . '%';
+
+                $params['busqueda_titulo'] = $valorBusqueda;
+                $params['busqueda_lugar'] = $valorBusqueda;
+            }
+
+            if (!empty($categoriaId)) {
+                $sql .= ' AND e.categoria_id = :categoria_id';
+                $params['categoria_id'] = $categoriaId;
+            }
+
+            $sql .= ' ORDER BY e.fecha_evento ASC, e.hora_evento ASC';
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+
+            return $stmt->fetchAll();
+
+        } catch (Throwable $e) {
+            error_log(
+                'Error al acceder al catalogo: ' . $e->getMessage()
+            );
+
+            Response::error(
+                'Ocurrió un error al entrar al catalogo. Intente nuevamente.',
+                500
+            );
         }
-
-        if (!empty($categoriaId)) {
-            $sql .= ' AND e.categoria_id = :categoria_id';
-            $params['categoria_id'] = $categoriaId;
-        }
-
-        $sql .= ' ORDER BY e.fecha_evento ASC, e.hora_evento ASC';
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-
-        return $stmt->fetchAll();
     }
 
     /**

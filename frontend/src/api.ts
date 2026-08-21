@@ -158,7 +158,6 @@ export async function createInscripcion(eventoId: number): Promise<InscripcionDa
     body: JSON.stringify({ evento_id: eventoId }),
     credentials: "include"
   });
-
   return (data?.data ?? data) as InscripcionData;
 }
 
